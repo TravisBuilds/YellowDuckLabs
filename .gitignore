@@ -1,0 +1,26 @@
+# Secrets. .env.example is committed; .env is not.
+.env
+.env.production
+deploy/*.dump
+
+# Cached source data: DEM tiles, raw responses, ingested documents.
+data/cache/
+data/documents/*/*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+web/.next/
+web/out/
+*.tsbuildinfo
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

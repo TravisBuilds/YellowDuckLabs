@@ -1,0 +1,33 @@
+# --- web / api ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.5
+pydantic-settings==2.7.1
+
+# --- database ---
+SQLAlchemy==2.0.37
+psycopg[binary]==3.2.4
+GeoAlchemy2==0.17.0
+alembic==1.14.1
+
+# --- geospatial ---
+# NOTE: geopandas / rasterio / GDAL are deliberately NOT used in this iteration.
+# shapely + pyproj cover the vector work, and the DEM arrives as PNG terrain
+# tiles which Pillow + numpy decode directly. This keeps the image free of a
+# GDAL toolchain. See docs/ARCHITECTURE.md ("Deviations from the brief").
+shapely==2.0.6
+pyproj==3.7.0
+h3==4.2.1
+numpy==2.2.1
+Pillow==11.1.0
+
+# --- io ---
+httpx==0.28.1
+PyYAML==6.0.2
+
+# --- ai (optional at runtime) ---
+anthropic==0.45.0
+
+# --- dev ---
+pytest==8.3.4
+pytest-asyncio==0.25.2

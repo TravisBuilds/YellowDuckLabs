@@ -1,0 +1,77 @@
+# Public Fire Watch stack. Nothing is published except 80/443.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Caddy terminates TLS for $DOMAIN (yellowducklabs.org) and proxies /api to
+# FastAPI so the browser stays on one origin.
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-firewatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-firewatch}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-firewatch} -d ${POSTGRES_DB:-firewatch}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    expose:
+      - "5432"
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-firewatch}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-firewatch}
+      FIREWATCH_CACHE_DIR: /data/cache
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - firewatch_cache:/data/cache
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_BASE: ""
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-yellowducklabs.org}
+      ACME_EMAIL: ${ACME_EMAIL:-firewatch@yellowducklabs.org}
+      PUBLIC_IP: ${PUBLIC_IP:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+volumes:
+  pgdata:
+  firewatch_cache:
+  caddy_data:
+  caddy_config:

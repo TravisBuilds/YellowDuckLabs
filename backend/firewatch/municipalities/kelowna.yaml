@@ -1,0 +1,324 @@
+# ---------------------------------------------------------------------------
+# City of Kelowna, British Columbia
+#
+# This file exists to prove portability. Onboarding a second municipality
+# required no change to any code in firewatch/ — only this configuration.
+#
+# Kelowna is deliberately a hard second case rather than a similar one:
+#
+#   * It sits in UTM zone 11N, not 10N, so the metric CRS handling is exercised
+#     rather than assumed.
+#   * It has no municipal ArcGIS endpoint configured here, so the run
+#     demonstrates what the picture looks like when the top precedence tier is
+#     absent entirely rather than merely unreachable.
+#   * It has a severe and well-documented fire history (Okanagan Mountain Park
+#     2003, McDougall Creek 2023), so the historical layers carry real signal
+#     where West Vancouver's are nearly empty.
+#   * Its fuels are interior dry-belt, not coastal rainforest, so the FBP grid
+#     and the remaining inventory gaps (stand structure, crown closure) read
+#     differently here than on the coast.
+# ---------------------------------------------------------------------------
+
+id: kelowna
+name: City of Kelowna
+short_name: Kelowna
+province: BC
+country: CA
+timezone: America/Vancouver
+
+analysis:
+  # Resolution 9 rather than 10. Kelowna's land area is roughly 2.5x West
+  # Vancouver's, and this is a portability demonstration, not the primary
+  # operating picture. The resolution is a configuration value precisely so
+  # that this trade-off is a decision rather than a code change. Cells are
+  # about 0.1 km2 at res 9 against about 0.015 km2 at res 10.
+  h3_resolution: 9
+  boundary_buffer_m: 2000
+  # UTM Zone 11N. The Okanagan, not the coast.
+  metric_crs: EPSG:32611
+
+boundary:
+  id: bc_legal_boundary
+  adapter: bcgw_wfs
+  precedence_tier: provincial
+  params:
+    layer: WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_MUNICIPALITIES_SP
+    feature_kind: boundary
+    filter_field: ADMIN_AREA_NAME
+    filter_value: City of Kelowna
+    licence: Open Government Licence - British Columbia
+    licence_url: https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc
+    attribution: Province of British Columbia, BC Geographic Warehouse (ABMS)
+
+sources:
+  # -------------------------------------------------------------------------
+  # MUNICIPAL AUTHORITATIVE
+  #
+  # None configured. Kelowna publishes open data, but it has not been probed,
+  # licence-checked or adapter-tested, and configuring an endpoint that has not
+  # been verified would put an unearned "municipal" tier in the provenance
+  # chain. The data health report will therefore show community-tier data in
+  # use for buildings and roads, which is the honest state of affairs.
+  # -------------------------------------------------------------------------
+
+  # -------------------------------------------------------------------------
+  # PROVINCIAL
+  # -------------------------------------------------------------------------
+  - id: bc_fire_perimeters
+    adapter: bcgw_wfs
+    precedence_tier: provincial
+    params:
+      layer: WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_FIRE_POLYS_SP
+      feature_kind: fire_perimeter
+      date_field: FIRE_DATE
+      licence: Open Government Licence - British Columbia
+      attribution: BC Wildfire Service, BC Geographic Warehouse
+    caveats:
+      - >-
+        The provincial historical fire perimeter dataset maps larger mapped
+        fires. Absence of a perimeter does not mean no fire occurred.
+
+  - id: bc_fire_incidents
+    adapter: bcgw_wfs
+    precedence_tier: provincial
+    params:
+      layer: WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_INCIDENTS_SP
+      feature_kind: fire_event
+      date_field: IGNITION_DATE
+      licence: Open Government Licence - British Columbia
+      attribution: BC Wildfire Service, BC Geographic Warehouse
+
+  # -------------------------------------------------------------------------
+  # FEDERAL — Canadian Wildland Fire Information System
+  # -------------------------------------------------------------------------
+  - id: cwfis_fire_weather_stations
+    adapter: cwfis_wfs
+    precedence_tier: federal
+    params:
+      layer: firewx_stns_current
+      feature_kind: fire_weather_observation
+      date_field: rep_date
+      search_radius_km: 150
+      licence: Open Government Licence - Canada
+      licence_url: https://open.canada.ca/en/open-government-licence-canada
+      attribution: Natural Resources Canada, Canadian Forest Service (CWFIS)
+    caveats:
+      - >-
+        Fire Weather Index codes are observed at stations, not at the cell. The
+        evidence panel reports which station was used and how far away it is.
+
+  - id: cwfis_hotspots
+    adapter: cwfis_wfs
+    precedence_tier: remote_sensing
+    params:
+      layer: hotspots
+      feature_kind: satellite_hotspot
+      date_field: rep_date
+      search_buffer_km: 40
+      sort_by: rep_date
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada CWFIS, from NASA/NOAA satellite data
+    caveats:
+      - >-
+        A satellite hotspot is a thermal anomaly, not a confirmed wildfire. In
+        the Okanagan, agricultural and orchard burning produces detections that
+        are not wildfires.
+
+  - id: cwfis_fire_danger
+    adapter: cwfis_wfs
+    precedence_tier: federal
+    params:
+      layer: fdr_current_shp
+      feature_kind: vegetation_cell
+      value_field: GRIDCODE
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada CWFIS, Fire Danger Rating
+
+  - id: cwfis_fbp_fuels
+    adapter: wcs_raster
+    precedence_tier: federal
+    params:
+      title: CFFDRS FBP Fuel Types 2024 (100 m)
+      base_url: https://cwfis.cfs.nrcan.gc.ca/geoserver/public/wcs
+      coverage_id: public__cffdrs_fbp_fuel_types_100m
+      native_crs: EPSG:3978
+      spatial_resolution: 100 m
+      temporal_resolution: National grid, 2024 edition
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada, Canadian Forest Service (CWFIS)
+    caveats:
+      - >-
+        A fuel type, not a fuel inventory. In the interior dry belt the
+        difference between grass, open ponderosa and dense regeneration
+        dominates fire behaviour; the 100 m class captures the first of those
+        distinctions and not the rest.
+
+  - id: cwfis_overlays
+    adapter: wms_overlay
+    precedence_tier: federal
+    params:
+      base_url: https://cwfis.cfs.nrcan.gc.ca/geoserver/public/wms
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada, Canadian Forest Service (CWFIS)
+      layers:
+        - { name: cffdrs_fwi, label: "Fire Weather Index", group: fire_now }
+        - { name: cffdrs_fdr, label: "Fire Danger Rating", group: fire_now }
+        - { name: cffdrs_dc, label: "Drought Code", group: fire_now }
+        - { name: cffdrs_bui, label: "Buildup Index", group: fire_now }
+        - { name: cffdrs_fbp_fuel_types_100m, label: "FBP Fuel Types (100 m)", group: terrain_fuels }
+
+  # -------------------------------------------------------------------------
+  # REMOTE SENSING
+  # -------------------------------------------------------------------------
+  - id: nasa_firms
+    adapter: nasa_firms
+    precedence_tier: remote_sensing
+    params:
+      products: [VIIRS_SNPP_NRT, VIIRS_NOAA20_NRT, MODIS_NRT]
+      day_range: 7
+      feature_kind: satellite_hotspot
+      licence: NASA Earth Science Data and Information System (free, open)
+      attribution: NASA FIRMS (LANCE / MODAPS)
+
+  - id: terrain_dem
+    adapter: terrain_tiles
+    precedence_tier: federal
+    params:
+      url_template: https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png
+      zoom: 13
+      licence: Various open sources, see attribution
+      licence_url: https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+      attribution: >-
+        Tilezen Joerd elevation tiles; for Canada primarily NRCan CDEM and
+        SRTM. See the Joerd attribution document for the full source list.
+
+  # -------------------------------------------------------------------------
+  # FEDERAL — weather
+  # -------------------------------------------------------------------------
+  - id: eccc_climate_stations
+    adapter: eccc_geomet
+    precedence_tier: federal
+    params:
+      collection: climate-stations
+      feature_kind: weather_station
+      search_radius_km: 60
+      licence: Open Government Licence - Canada
+      attribution: Environment and Climate Change Canada, MSC GeoMet
+
+  - id: eccc_hourly_observations
+    adapter: eccc_geomet
+    precedence_tier: federal
+    params:
+      collection: climate-hourly
+      feature_kind: weather_observation
+      date_field: LOCAL_DATE
+      search_radius_km: 60
+      lookback_days: 14
+      licence: Open Government Licence - Canada
+      attribution: Environment and Climate Change Canada, MSC GeoMet
+
+  # -------------------------------------------------------------------------
+  # COMMUNITY
+  #
+  # In Kelowna these are the only building, road and vegetation data in the
+  # system, so they carry more weight than they do in West Vancouver. That is
+  # visible in the data health panel rather than hidden.
+  # -------------------------------------------------------------------------
+  - id: osm_buildings
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: building
+      query: 'way["building"]({bbox});relation["building"]({bbox});'
+      licence: Open Database License (ODbL) 1.0
+      licence_url: https://opendatacommons.org/licenses/odbl/1-0/
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        With no municipal footprint layer configured for Kelowna, building
+        counts rest entirely on community mapping and are a lower bound of
+        unknown tightness.
+
+  - id: osm_roads
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: road
+      query: 'way["highway"]({bbox});'
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        A mapped road is not evidence of fire apparatus access.
+
+  - id: osm_water_assets
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: water_asset
+      query: >-
+        node["emergency"="fire_hydrant"]({bbox});
+        way["man_made"="reservoir_covered"]({bbox});
+        way["landuse"="reservoir"]({bbox});
+        node["emergency"="water_tank"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+
+  - id: osm_parks
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: park
+      query: >-
+        way["leisure"="park"]({bbox});
+        way["leisure"="nature_reserve"]({bbox});
+        relation["leisure"="park"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+
+  - id: osm_fire_stations
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: fire_station
+      query: >-
+        node["amenity"="fire_station"]({bbox});
+        way["amenity"="fire_station"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+
+  - id: osm_vegetation
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: vegetation_cell
+      query: >-
+        way["natural"="wood"]({bbox});
+        way["landuse"="forest"]({bbox});
+        way["natural"="scrub"]({bbox});
+        way["natural"="heath"]({bbox});
+        way["natural"="grassland"]({bbox});
+        relation["natural"="wood"]({bbox});
+        relation["landuse"="forest"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        A vegetation presence proxy, with no fuel type, crown closure or
+        surface fuel load. In the interior dry belt the difference between
+        grassland, open ponderosa and dense young stands dominates fire
+        behaviour, and none of that distinction is captured here.
+
+known_unknowns:
+  - >-
+    Stand structure, crown closure, surface load and ladder fuels. The FBP
+    100 m class distinguishes grass from timber but not open ponderosa from
+    dense regeneration, which is the distinction that matters most here.
+  - Municipal building footprints, road classification and hydrant network.
+  - Hydrant flow rates and static pressure, particularly on the upper benches.
+  - Actual dispatch, turnout and travel times by area and time of day.
+  - >-
+    Okanagan Lake's effect on local wind, including diurnal lake breeze
+    reversals that governed spread behaviour in 2003 and 2023.
+  - Interface conditions in the orchard and vineyard belt.
+  - Extent and condition of FireSmart treatments and fuel breaks.

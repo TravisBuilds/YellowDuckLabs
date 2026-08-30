@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-firewatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-firewatch}
+      POSTGRES_DB: ${POSTGRES_DB:-firewatch}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-firewatch} -d ${POSTGRES_DB:-firewatch}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-firewatch}:${POSTGRES_PASSWORD:-firewatch}@db:5432/${POSTGRES_DB:-firewatch}
+      FIREWATCH_CACHE_DIR: /data/cache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    command: uvicorn firewatch.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  web:
+    build: ./web
+    environment:
+      # Browser-side calls go to the host-published API port.
+      NEXT_PUBLIC_API_BASE: http://localhost:${API_PORT:-8000}
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  pgdata:

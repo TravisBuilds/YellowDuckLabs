@@ -1,0 +1,405 @@
+# ---------------------------------------------------------------------------
+# District Municipality of West Vancouver, British Columbia
+#
+# This file is the ONLY West-Vancouver-specific configuration. Nothing in
+# firewatch/core reads it directly by name.
+# ---------------------------------------------------------------------------
+
+id: west-vancouver
+name: District Municipality of West Vancouver
+short_name: West Vancouver
+province: BC
+country: CA
+timezone: America/Vancouver
+# The mission. The UI opens here regardless of how many municipalities are
+# configured or how their names happen to sort.
+primary: true
+
+analysis:
+  h3_resolution: 10
+  boundary_buffer_m: 2000
+  # UTM Zone 10N. Correct metric CRS for the south coast of BC.
+  metric_crs: EPSG:32610
+
+# The authoritative legal boundary. Sourced provincially rather than
+# municipally because the provincial WFS is open, stable and machine-readable,
+# and because it makes every BC municipality onboardable the same way.
+boundary:
+  id: bc_legal_boundary
+  adapter: bcgw_wfs
+  precedence_tier: provincial
+  params:
+    layer: WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_MUNICIPALITIES_SP
+    feature_kind: boundary
+    filter_field: ADMIN_AREA_NAME
+    filter_value: District Municipality of West Vancouver
+    licence: Open Government Licence - British Columbia
+    licence_url: https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc
+    attribution: Province of British Columbia, BC Geographic Warehouse (ABMS)
+
+sources:
+  # -------------------------------------------------------------------------
+  # MUNICIPAL AUTHORITATIVE (highest precedence)
+  #
+  # The District's own GIS holdings are the best available data for buildings,
+  # roads and water utilities. They are configured here and attempted on every
+  # ingest. If the portal is unreachable the run records status=FAILED with the
+  # reason; it never silently falls through to a lower-precedence source
+  # without saying so.
+  # -------------------------------------------------------------------------
+  - id: wv_buildings
+    adapter: arcgis_feature_service
+    precedence_tier: municipal
+    params:
+      base_url: https://dwvmaps.westvancouver.ca/server/rest/services
+      # Discovered at runtime: the adapter walks the service catalogue looking
+      # for a layer whose name matches these patterns, so a service rename does
+      # not require a code change.
+      layer_name_patterns: ["building"]
+      feature_kind: building
+      licence: District of West Vancouver Open Data
+      attribution: District of West Vancouver
+    caveats:
+      - >-
+        The District's building footprints were originally compiled from 2016
+        imagery and LiDAR and have been maintained since, but structures built
+        after that compilation may be missing. Building counts are therefore a
+        lower bound.
+
+  - id: wv_roads
+    adapter: arcgis_feature_service
+    precedence_tier: municipal
+    params:
+      base_url: https://dwvmaps.westvancouver.ca/server/rest/services
+      layer_name_patterns: ["road", "centreline", "centerline"]
+      feature_kind: road
+      licence: District of West Vancouver Open Data
+      attribution: District of West Vancouver
+
+  - id: wv_water_utilities
+    adapter: arcgis_feature_service
+    precedence_tier: municipal
+    params:
+      base_url: https://dwvmaps.westvancouver.ca/server/rest/services
+      layer_name_patterns: ["hydrant", "water main", "watermain", "reservoir"]
+      feature_kind: water_asset
+      licence: District of West Vancouver Open Data
+      attribution: District of West Vancouver
+    caveats:
+      - >-
+        Mapped location of a hydrant or main does not establish flow rate,
+        static pressure, operability, or firefighting suitability. Those remain
+        unknown until West Vancouver Fire & Rescue supplies them.
+
+  - id: wv_parks
+    adapter: arcgis_feature_service
+    precedence_tier: municipal
+    params:
+      base_url: https://dwvmaps.westvancouver.ca/server/rest/services
+      layer_name_patterns: ["park"]
+      feature_kind: park
+      licence: District of West Vancouver Open Data
+      attribution: District of West Vancouver
+
+  # -------------------------------------------------------------------------
+  # PROVINCIAL
+  # -------------------------------------------------------------------------
+  - id: bc_fire_perimeters
+    adapter: bcgw_wfs
+    precedence_tier: provincial
+    params:
+      layer: WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_FIRE_POLYS_SP
+      feature_kind: fire_perimeter
+      date_field: FIRE_DATE
+      licence: Open Government Licence - British Columbia
+      attribution: BC Wildfire Service, BC Geographic Warehouse
+    caveats:
+      - >-
+        The provincial historical fire perimeter dataset maps larger mapped
+        fires. Absence of a perimeter does not mean no fire occurred; small or
+        quickly-suppressed incidents are frequently absent.
+
+  - id: bc_fire_incidents
+    adapter: bcgw_wfs
+    precedence_tier: provincial
+    params:
+      layer: WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_INCIDENTS_SP
+      feature_kind: fire_event
+      date_field: IGNITION_DATE
+      licence: Open Government Licence - British Columbia
+      attribution: BC Wildfire Service, BC Geographic Warehouse
+
+  # -------------------------------------------------------------------------
+  # FEDERAL — Canadian Wildland Fire Information System
+  # -------------------------------------------------------------------------
+  - id: cwfis_fire_weather_stations
+    adapter: cwfis_wfs
+    precedence_tier: federal
+    params:
+      layer: firewx_stns_current
+      feature_kind: fire_weather_observation
+      date_field: rep_date
+      # Fire weather is a regional field; the nearest station may be well
+      # outside the municipality, so we search a wide radius.
+      search_radius_km: 150
+      licence: Open Government Licence - Canada
+      licence_url: https://open.canada.ca/en/open-government-licence-canada
+      attribution: Natural Resources Canada, Canadian Forest Service (CWFIS)
+    caveats:
+      - >-
+        Fire Weather Index codes are observed at stations, not at the cell. The
+        evidence panel reports which station was used and how far away it is.
+
+  - id: cwfis_hotspots
+    adapter: cwfis_wfs
+    precedence_tier: remote_sensing
+    params:
+      layer: hotspots
+      feature_kind: satellite_hotspot
+      date_field: rep_date
+      # Detections outside the boundary still matter as approaching threat.
+      search_buffer_km: 40
+      # This layer has no primary key, so paging needs an explicit sort field.
+      sort_by: rep_date
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada CWFIS, from NASA/NOAA satellite data
+    caveats:
+      - >-
+        A satellite hotspot is a thermal anomaly, not a confirmed wildfire. It
+        may be industrial heat, agricultural burning, or a false alarm, and
+        small or obscured fires are frequently missed entirely.
+
+  - id: cwfis_fire_danger
+    adapter: cwfis_wfs
+    precedence_tier: federal
+    params:
+      layer: fdr_current_shp
+      feature_kind: vegetation_cell
+      value_field: GRIDCODE
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada CWFIS, Fire Danger Rating
+
+  - id: cwfis_fbp_fuels
+    adapter: wcs_raster
+    precedence_tier: federal
+    params:
+      title: CFFDRS FBP Fuel Types 2024 (100 m)
+      base_url: https://cwfis.cfs.nrcan.gc.ca/geoserver/public/wcs
+      coverage_id: public__cffdrs_fbp_fuel_types_100m
+      native_crs: EPSG:3978
+      spatial_resolution: 100 m
+      temporal_resolution: National grid, 2024 edition
+      licence: Open Government Licence - Canada
+      licence_url: https://open.canada.ca/en/open-government-licence-canada
+      attribution: Natural Resources Canada, Canadian Forest Service (CWFIS)
+    caveats:
+      - >-
+        A fuel type, not a fuel inventory. The 100 m class does not carry stand
+        age, crown closure, surface fuel load or ladder fuels.
+      - >-
+        Canopy height used for sightlines is a typical value for the FBP class,
+        not measured LiDAR. Real screening under dense timber is no better.
+
+  # Visual raster overlays. Registered for provenance and served to the map as
+  # WMS; not ingested as features.
+  - id: cwfis_overlays
+    adapter: wms_overlay
+    precedence_tier: federal
+    params:
+      base_url: https://cwfis.cfs.nrcan.gc.ca/geoserver/public/wms
+      licence: Open Government Licence - Canada
+      attribution: Natural Resources Canada, Canadian Forest Service (CWFIS)
+      layers:
+        - { name: cffdrs_fwi, label: "Fire Weather Index", group: fire_now }
+        - { name: cffdrs_fdr, label: "Fire Danger Rating", group: fire_now }
+        - { name: cffdrs_dc, label: "Drought Code", group: fire_now }
+        - { name: cffdrs_bui, label: "Buildup Index", group: fire_now }
+        - { name: cffdrs_fbp_fuel_types_100m, label: "FBP Fuel Types (100 m)", group: terrain_fuels }
+
+  # -------------------------------------------------------------------------
+  # REMOTE SENSING
+  # -------------------------------------------------------------------------
+  - id: nasa_firms
+    adapter: nasa_firms
+    precedence_tier: remote_sensing
+    params:
+      # Multiple products so the observation-gap view can compare them.
+      products: [VIIRS_SNPP_NRT, VIIRS_NOAA20_NRT, MODIS_NRT]
+      day_range: 7
+      feature_kind: satellite_hotspot
+      licence: NASA Earth Science Data and Information System (free, open)
+      licence_url: https://www.earthdata.nasa.gov/engage/open-data-services-and-software/data-and-information-policy
+      attribution: NASA FIRMS (LANCE / MODAPS)
+    caveats:
+      - >-
+        Requires a free FIRMS MAP_KEY. Without one this source reports
+        UNAVAILABLE rather than returning an empty result that could be
+        mistaken for "no detections".
+
+  - id: terrain_dem
+    adapter: terrain_tiles
+    precedence_tier: federal
+    params:
+      # Terrarium-encoded elevation tiles. Global coverage, no API key, which
+      # is what makes terrain derivation portable to any municipality.
+      url_template: https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png
+      zoom: 13
+      licence: Various open sources, see attribution
+      licence_url: https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+      attribution: >-
+        Tilezen Joerd elevation tiles; for Canada primarily NRCan CDEM and
+        SRTM. See the Joerd attribution document for the full source list.
+    caveats:
+      - >-
+        This is a global composite DEM at roughly 30 m posting, used because it
+        is portable across municipalities. The District publishes bare-earth
+        LiDAR that is far more precise; substituting it would materially
+        improve slope and terrain-ruggedness estimates in West Vancouver.
+
+  # -------------------------------------------------------------------------
+  # FEDERAL — weather
+  # -------------------------------------------------------------------------
+  - id: eccc_climate_stations
+    adapter: eccc_geomet
+    precedence_tier: federal
+    params:
+      collection: climate-stations
+      feature_kind: weather_station
+      search_radius_km: 60
+      licence: Open Government Licence - Canada
+      attribution: Environment and Climate Change Canada, MSC GeoMet
+
+  - id: eccc_hourly_observations
+    adapter: eccc_geomet
+    precedence_tier: federal
+    params:
+      collection: climate-hourly
+      feature_kind: weather_observation
+      date_field: LOCAL_DATE
+      search_radius_km: 60
+      lookback_days: 14
+      licence: Open Government Licence - Canada
+      attribution: Environment and Climate Change Canada, MSC GeoMet
+    caveats:
+      - >-
+        Station observations are point measurements. West Vancouver's terrain
+        drives strong local wind and temperature variation (notably Squamish
+        outflow and slope-driven upvalley winds) that a station at sea level
+        will not represent.
+
+  # -------------------------------------------------------------------------
+  # COMMUNITY FALLBACK
+  # -------------------------------------------------------------------------
+  - id: osm_buildings
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: building
+      query: 'way["building"]({bbox});relation["building"]({bbox});'
+      licence: Open Database License (ODbL) 1.0
+      licence_url: https://opendatacommons.org/licenses/odbl/1-0/
+      attribution: "© OpenStreetMap contributors"
+
+  - id: osm_roads
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: road
+      query: 'way["highway"]({bbox});'
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        A mapped road is not evidence of fire apparatus access. Width, grade,
+        turning radius, surface, overhead clearance, gates and seasonal
+        closures are all unknown from this dataset.
+
+  - id: osm_water_assets
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: water_asset
+      query: >-
+        node["emergency"="fire_hydrant"]({bbox});
+        way["man_made"="reservoir_covered"]({bbox});
+        way["landuse"="reservoir"]({bbox});
+        node["emergency"="water_tank"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        Community-mapped hydrant coverage is incomplete and carries no flow or
+        operability information.
+
+  - id: osm_parks
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: park
+      query: >-
+        way["leisure"="park"]({bbox});
+        way["leisure"="nature_reserve"]({bbox});
+        relation["leisure"="park"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+
+  - id: osm_fire_stations
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: fire_station
+      query: >-
+        node["amenity"="fire_station"]({bbox});
+        way["amenity"="fire_station"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        Station location says nothing about staffing, apparatus type, or
+        turnout and travel time. Response time is not modelled.
+
+  - id: osm_vegetation
+    adapter: osm_overpass
+    precedence_tier: community
+    params:
+      feature_kind: vegetation_cell
+      query: >-
+        way["natural"="wood"]({bbox});
+        way["landuse"="forest"]({bbox});
+        way["natural"="scrub"]({bbox});
+        way["natural"="heath"]({bbox});
+        way["natural"="grassland"]({bbox});
+        relation["natural"="wood"]({bbox});
+        relation["landuse"="forest"]({bbox});
+      licence: Open Database License (ODbL) 1.0
+      attribution: "© OpenStreetMap contributors"
+    caveats:
+      - >-
+        This is a vegetation *presence* proxy used for continuity only. Fuel
+        type and spread behaviour come from the CWFIS FBP national grid, not
+        from these polygons. Crown closure, stand age, surface load and ladder
+        fuels remain unknown.
+
+documents:
+  - id: wv-cwrp-2025
+    title: West Vancouver Community Wildfire Resiliency Plan
+    publisher: District of West Vancouver
+    publication_date: "2025"
+    url: https://westvancouver.ca/government-administration/strategies-reports/strategies-plans/community-wildfire-resiliency-plan
+    # The District's web front end blocks automated retrieval. Drop the PDF at
+    # this path to enable document retrieval.
+    local_path: data/documents/west-vancouver/cwrp-2025.pdf
+
+known_unknowns:
+  - Actual fire apparatus access on steep, narrow and dead-end upper-slope roads.
+  - Hydrant flow rates and static pressure, particularly at upper elevations.
+  - Actual dispatch, turnout and travel times by area and time of day.
+  - Private gates and locked access on driveways and forest service roads.
+  - Seasonal or condition-based road restrictions.
+  - Crew and apparatus availability, including mutual aid assumptions.
+  - >-
+    Local wind behaviour in the creek drainages (Capilano, Brothers, Nelson,
+    Cypress) which is likely to dominate real spread behaviour.
+  - Stand structure, crown closure, surface fuel load and ladder fuels (the FBP type is a class, not an inventory).
+  - Condition and extent of completed FireSmart fuel treatments.
+  - Responder judgement about which areas actually worry them.
