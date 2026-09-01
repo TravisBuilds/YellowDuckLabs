@@ -27,7 +27,7 @@ from firewatch.sources.base import (
 from firewatch.sources.http import SourceUnavailable, get_text
 
 AREA_CSV = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
-MAX_DAY_RANGE = 10
+MAX_DAY_RANGE = 5
 
 
 class NasaFirmsAdapter(SourceAdapter):
@@ -74,7 +74,7 @@ class NasaFirmsAdapter(SourceAdapter):
 
         west, south, east, north = ctx.bounds
         bbox = f"{west:.4f},{south:.4f},{east:.4f},{north:.4f}"
-        day_range = min(int(self.params.get("day_range", 7)), MAX_DAY_RANGE)
+        day_range = min(int(self.params.get("day_range", 5)), MAX_DAY_RANGE)
 
         rows: list[dict] = []
         notes: list[str] = []

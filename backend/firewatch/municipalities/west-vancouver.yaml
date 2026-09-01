@@ -225,7 +225,7 @@ sources:
     params:
       # Multiple products so the observation-gap view can compare them.
       products: [VIIRS_SNPP_NRT, VIIRS_NOAA20_NRT, MODIS_NRT]
-      day_range: 7
+      day_range: 5
       feature_kind: satellite_hotspot
       licence: NASA Earth Science Data and Information System (free, open)
       licence_url: https://www.earthdata.nasa.gov/engage/open-data-services-and-software/data-and-information-policy

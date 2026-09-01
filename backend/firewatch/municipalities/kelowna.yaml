@@ -175,7 +175,7 @@ sources:
     precedence_tier: remote_sensing
     params:
       products: [VIIRS_SNPP_NRT, VIIRS_NOAA20_NRT, MODIS_NRT]
-      day_range: 7
+      day_range: 5
       feature_kind: satellite_hotspot
       licence: NASA Earth Science Data and Information System (free, open)
       attribution: NASA FIRMS (LANCE / MODAPS)
