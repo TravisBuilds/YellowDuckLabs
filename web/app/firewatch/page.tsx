@@ -54,6 +54,7 @@ export default function Page() {
   const [cellMetric, setCellMetric] = useState<string | null>(null);
   const [cellOpacity, setCellOpacity] = useState(0.6);
   const [hillshade, setHillshade] = useState(true);
+  const [topPrioritiesOnly, setTopPrioritiesOnly] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
 
   const [visibleFeatures, setVisibleFeatures] = useState<Record<string, boolean>>(() =>
@@ -342,6 +343,7 @@ export default function Page() {
               cellMetric={cellMetric}
               cellOpacity={cellOpacity}
               hillshade={hillshade}
+              topPrioritiesOnly={topPrioritiesOnly}
               visibleFeatures={visibleFeatures}
               visibleOverlays={visibleOverlays}
               overlays={overlays}
@@ -350,6 +352,7 @@ export default function Page() {
               onCellMetric={setCellMetric}
               onCellOpacity={setCellOpacity}
               onHillshade={setHillshade}
+              onTopPrioritiesOnly={setTopPrioritiesOnly}
               onFeature={(id, visible) =>
                 setVisibleFeatures((prev) => ({ ...prev, [id]: visible }))
               }
@@ -367,6 +370,7 @@ export default function Page() {
             cellValue={cellValue}
             cellMetric={cellMetric}
             cellOpacity={cellOpacity}
+            topPrioritiesOnly={topPrioritiesOnly}
             visibleFeatures={visibleFeatures}
             overlays={overlays}
             visibleOverlays={visibleOverlays}
@@ -386,7 +390,11 @@ export default function Page() {
           {!cellMetric && (
             <div className="absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-black/75 px-2.5 py-2 backdrop-blur lg:bottom-9">
               <div className="text-[9px] uppercase tracking-wider text-zinc-500">
-                {cellValue === "priority_percentile" ? "Relative rank" : "Score"}
+                {topPrioritiesOnly
+                  ? "High & very high only"
+                  : cellValue === "priority_percentile"
+                    ? "Relative rank"
+                    : "Score"}
               </div>
               <div className="mt-1 flex items-center gap-1">
                 {legend.map(({ stop, color }) => (

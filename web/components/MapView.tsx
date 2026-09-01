@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { API_BASE } from "@/lib/api";
 import { scoreColorExpression } from "@/lib/display";
-import { FEATURE_LAYERS, type FeatureLayerSpec } from "@/lib/layers";
+import { FEATURE_LAYERS, TOP_PRIORITY_MIN, type FeatureLayerSpec } from "@/lib/layers";
 
 interface WmsOverlay {
   source_id: string;
@@ -22,6 +22,7 @@ interface Props {
   cellValue: string;
   cellMetric: string | null;
   cellOpacity: number;
+  topPrioritiesOnly: boolean;
   visibleFeatures: Record<string, boolean>;
   overlays: WmsOverlay[];
   visibleOverlays: Record<string, boolean>;
@@ -76,6 +77,7 @@ export default function MapView({
   cellValue,
   cellMetric,
   cellOpacity,
+  topPrioritiesOnly,
   visibleFeatures,
   overlays,
   visibleOverlays,
@@ -148,7 +150,15 @@ export default function MapView({
       );
 
       await addBoundary(instance, municipalityId, labelLayer);
-      addCellLayers(instance, municipalityId, cellValue, date, cellOpacity, labelLayer);
+      addCellLayers(
+        instance,
+        municipalityId,
+        cellValue,
+        date,
+        cellOpacity,
+        topPrioritiesOnly,
+        labelLayer,
+      );
 
       instance.addSource(SELECTED_SOURCE, {
         type: "geojson",
@@ -214,7 +224,9 @@ export default function MapView({
     if (!instance || !loaded.current) return;
     const source = instance.getSource("cells") as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
-    source.setData(cellUrl(municipalityId, cellValue, cellMetric, date) as unknown as never);
+    source.setData(
+      cellUrl(municipalityId, cellValue, cellMetric, date, topPrioritiesOnly) as unknown as never,
+    );
     // A raw metric is not a 0..1 score, so switch to a relative ramp for it.
     if (instance.getLayer(CELL_FILL)) {
       instance.setPaintProperty(
@@ -223,7 +235,7 @@ export default function MapView({
         cellMetric ? metricColorExpression() : scoreColorExpression("v"),
       );
     }
-  }, [municipalityId, cellValue, cellMetric, date]);
+  }, [municipalityId, cellValue, cellMetric, date, topPrioritiesOnly]);
 
   useEffect(() => {
     const instance = map.current;
@@ -332,6 +344,7 @@ function cellUrl(
   cellValue: string,
   cellMetric: string | null,
   date: string | null,
+  topPrioritiesOnly: boolean,
 ): string {
   const base = `${API_BASE}/api/municipalities/${municipalityId}`;
   const params = new URLSearchParams();
@@ -341,6 +354,9 @@ function cellUrl(
     return `${base}/cells/metric?${params}`;
   }
   params.set("value", cellValue);
+  if (topPrioritiesOnly) {
+    params.set("min_overall_priority", String(TOP_PRIORITY_MIN));
+  }
   return `${base}/cells?${params}`;
 }
 
@@ -457,11 +473,12 @@ function addCellLayers(
   cellValue: string,
   date: string | null,
   opacity: number,
+  topPrioritiesOnly: boolean,
   beforeId?: string,
 ) {
   instance.addSource("cells", {
     type: "geojson",
-    data: cellUrl(municipalityId, cellValue, null, date),
+    data: cellUrl(municipalityId, cellValue, null, date, topPrioritiesOnly),
   });
   instance.addLayer(
     {

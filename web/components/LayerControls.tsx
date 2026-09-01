@@ -8,7 +8,7 @@
  * not actually support.
  */
 
-import { CELL_VALUES, FEATURE_LAYERS, GROUP_LABELS, GROUP_ORDER } from "@/lib/layers";
+import { CELL_VALUES, FEATURE_LAYERS, GROUP_LABELS, GROUP_ORDER, TOP_PRIORITY_MIN } from "@/lib/layers";
 import type { LayerGroup } from "@/lib/layers";
 import { Callout, Collapsible, Panel } from "@/components/ui";
 
@@ -34,6 +34,7 @@ interface Props {
   cellMetric: string | null;
   cellOpacity: number;
   hillshade: boolean;
+  topPrioritiesOnly: boolean;
   visibleFeatures: Record<string, boolean>;
   visibleOverlays: Record<string, boolean>;
   overlays: Overlay[];
@@ -42,6 +43,7 @@ interface Props {
   onCellMetric: (metric: string | null) => void;
   onCellOpacity: (value: number) => void;
   onHillshade: (value: boolean) => void;
+  onTopPrioritiesOnly: (value: boolean) => void;
   onFeature: (id: string, visible: boolean) => void;
   onOverlay: (name: string, visible: boolean) => void;
 }
@@ -51,6 +53,7 @@ export default function LayerControls({
   cellMetric,
   cellOpacity,
   hillshade,
+  topPrioritiesOnly,
   visibleFeatures,
   visibleOverlays,
   overlays,
@@ -59,6 +62,7 @@ export default function LayerControls({
   onCellMetric,
   onCellOpacity,
   onHillshade,
+  onTopPrioritiesOnly,
   onFeature,
   onOverlay,
 }: Props) {
@@ -147,6 +151,7 @@ export default function LayerControls({
             if (group !== "yellow_duck") return null;
           }
           const activeCount =
+            (group === "yellow_duck" && topPrioritiesOnly ? 1 : 0) +
             specs.filter((s) => visibleFeatures[s.id]).length +
             groupOverlays.filter((o) => visibleOverlays[o.name]).length;
 
@@ -155,14 +160,35 @@ export default function LayerControls({
               key={group}
               title={GROUP_LABELS[group]}
               count={activeCount ? `${activeCount} on` : ""}
-              defaultOpen={group === "fire_now" || group === "defenses"}
+              defaultOpen={group === "yellow_duck" || group === "fire_now" || group === "defenses"}
             >
               {group === "yellow_duck" && (
-                <Callout tone="gap">
-                  No Yellow Duck sensor is deployed yet. This group is where camera,
-                  drone and ground-sensor coverage will appear, and its emptiness is
-                  the point: nothing here is watching.
-                </Callout>
+                <>
+                  <label className="flex cursor-pointer items-start gap-2 py-1.5 text-[12px]">
+                    <input
+                      type="checkbox"
+                      checked={topPrioritiesOnly}
+                      onChange={(event) => onTopPrioritiesOnly(event.target.checked)}
+                      className="mt-0.5 accent-duck"
+                    />
+                    <span
+                      className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: "#c53030" }}
+                    />
+                    <span className="min-w-0">
+                      <span className="text-zinc-300">Top priorities only</span>
+                      <span className="block text-[10px] leading-snug text-zinc-600">
+                        High and Very high cells only (score ≥ {TOP_PRIORITY_MIN}). Hides
+                        everything else so the map reads at a glance.
+                      </span>
+                    </span>
+                  </label>
+                  <Callout tone="gap">
+                    No Yellow Duck sensor is deployed yet. This group is where camera,
+                    drone and ground-sensor coverage will appear, and its emptiness is
+                    the point: nothing here is watching.
+                  </Callout>
+                </>
               )}
 
               {specs.map((spec) => (

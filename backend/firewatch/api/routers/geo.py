@@ -99,6 +99,7 @@ def cells(
     value: str = Query("overall_priority"),
     within_boundary: bool = True,
     min_value: float | None = None,
+    min_overall_priority: float | None = None,
     session: Session = Depends(get_session),
 ) -> dict:
     """Analysis cells as GeoJSON, coloured by one score column.
@@ -132,6 +133,8 @@ def cells(
         conditions.append("c.within_boundary")
     if min_value is not None:
         conditions.append(f"p.{value} >= :minv")
+    if min_overall_priority is not None:
+        conditions.append("p.overall_priority >= :minop")
 
     payload = session.execute(
         text(
@@ -162,13 +165,19 @@ def cells(
               ) AS features
             """
         ),
-        {"m": municipality_id, "d": as_of, "minv": min_value},
+        {
+            "m": municipality_id,
+            "d": as_of,
+            "minv": min_value,
+            "minop": min_overall_priority,
+        },
     ).scalar()
 
     result = payload or {"type": "FeatureCollection", "features": []}
     result["properties"] = {
         "as_of_date": as_of,
         "value_column": value,
+        "min_overall_priority": min_overall_priority,
         "count": len(result.get("features", [])),
     }
     return result

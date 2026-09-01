@@ -32,6 +32,9 @@ export const GROUP_ORDER: LayerGroup[] = [
   "fire_history",
 ];
 
+/** overall_priority at or above this is "High" or "Very high" (see PRIORITY_BANDS). */
+export const TOP_PRIORITY_MIN = 0.6;
+
 export interface FeatureLayerSpec {
   id: string;
   label: string;
