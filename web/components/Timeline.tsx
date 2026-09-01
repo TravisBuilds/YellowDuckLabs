@@ -31,7 +31,7 @@ export default function Timeline({ dates, active, latest, onSelect }: Props) {
   const max = Math.max(...values, 0.001);
 
   return (
-    <div className="flex items-center gap-3 border-t border-white/10 bg-black/60 px-4 py-2 backdrop-blur">
+    <div className="flex items-center gap-3 border-t border-white/10 bg-black/60 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:px-4">
       <div className="shrink-0">
         <div className="text-[10px] uppercase tracking-wider text-zinc-500">
           {historical ? "Historical replay" : "Latest picture"}
@@ -53,10 +53,10 @@ export default function Timeline({ dates, active, latest, onSelect }: Props) {
               type="button"
               title={`${point.date} · mean priority ${fmt(point.mean_priority, 3)} · ${point.cells.toLocaleString()} cells`}
               onClick={() => onSelect(point.date === latest ? null : point.date)}
-              className="group flex w-3 shrink-0 flex-col items-center justify-end"
+              className="group flex w-4 shrink-0 flex-col items-center justify-end lg:w-3"
             >
               <span
-                className={`w-2 rounded-sm transition-colors ${
+                className={`w-2.5 rounded-sm transition-colors lg:w-2 ${
                   isActive ? "bg-duck" : "bg-zinc-700 group-hover:bg-zinc-500"
                 }`}
                 style={{ height }}
@@ -70,13 +70,13 @@ export default function Timeline({ dates, active, latest, onSelect }: Props) {
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="shrink-0 rounded border border-amber-500/40 px-2 py-1 text-[10px] text-amber-300 hover:bg-amber-500/10"
+          className="shrink-0 rounded border border-amber-500/40 px-2 py-1.5 text-[11px] text-amber-300 hover:bg-amber-500/10 lg:py-1 lg:text-[10px]"
         >
           Back to latest
         </button>
       )}
 
-      <div className="shrink-0 text-[10px] leading-snug text-zinc-600">
+      <div className="hidden shrink-0 text-[10px] leading-snug text-zinc-600 lg:block">
         Bars show mean priority
         <br />
         across all cells.

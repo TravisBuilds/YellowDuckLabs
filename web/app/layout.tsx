@@ -1,17 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fire Watch — Yellow Duck Labs",
+  title: {
+    default: "Yellow Duck Labs",
+    template: "%s — Yellow Duck Labs",
+  },
   description:
-    "Municipal wildfire operating picture: what we preserve, what threatens it, what already defends it, and where the gaps are.",
+    "A silent sentry: safeguarding the continuity of communities, cultures, ecosystems, and the ways of life entrusted to our care.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#070a0f",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="h-full overflow-hidden font-sans antialiased">{children}</body>
+    <html lang="en" className="h-full">
+      <body className="min-h-full font-sans antialiased">{children}</body>
     </html>
   );
 }

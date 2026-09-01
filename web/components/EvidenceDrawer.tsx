@@ -52,8 +52,8 @@ export default function EvidenceDrawer({ profile, loading, error }: Props) {
   }
   if (!profile) {
     return (
-      <div className="p-6 text-[12px] leading-relaxed text-zinc-500">
-        Click anywhere on the map to inspect that location: what is there to lose,
+      <div className="p-5 text-[14px] leading-relaxed text-zinc-400 lg:p-6 lg:text-[12px] lg:text-zinc-500">
+        Tap anywhere on the map to inspect that location: what is there to lose,
         what threat it faces, what already protects it, and what nobody knows.
       </div>
     );
@@ -71,7 +71,7 @@ export default function EvidenceDrawer({ profile, loading, error }: Props) {
   const components = explanation?.components || {};
 
   return (
-    <div className="overflow-y-auto">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-contain">
       <Panel
         title="Fire Watch Priority"
         subtitle={`Cell ${profile.cell.h3_index} · ${profile.cell.centroid.lat.toFixed(4)}, ${profile.cell.centroid.lon.toFixed(4)} · as of ${profile.as_of_date}`}

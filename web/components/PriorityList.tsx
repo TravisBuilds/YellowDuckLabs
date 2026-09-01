@@ -90,7 +90,7 @@ export default function PriorityList({ municipalityId, date, onSelect }: Props) 
   }, [load]);
 
   return (
-    <div className="overflow-y-auto">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-contain">
       <Panel title="Priorities" subtitle={preset.note}>
         <div className="flex flex-wrap gap-1">
           {PRESETS.map((option) => (
@@ -98,7 +98,7 @@ export default function PriorityList({ municipalityId, date, onSelect }: Props) 
               key={option.id}
               type="button"
               onClick={() => setPreset(option)}
-              className={`rounded px-2 py-1 text-[11px] ${
+              className={`min-h-9 rounded px-2.5 py-2 text-[13px] lg:min-h-0 lg:px-2 lg:py-1 lg:text-[11px] ${
                 preset.id === option.id
                   ? "bg-duck text-black"
                   : "border border-white/10 text-zinc-400 hover:text-white"
@@ -133,7 +133,7 @@ export default function PriorityList({ municipalityId, date, onSelect }: Props) 
                 <button
                   type="button"
                   onClick={() => onSelect(cell.lat, cell.lon)}
-                  className="w-full rounded border border-white/5 bg-white/[0.02] px-2.5 py-2 text-left hover:border-duck/40"
+                  className="w-full rounded border border-white/5 bg-white/[0.02] px-2.5 py-2.5 text-left hover:border-duck/40 lg:py-2"
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-[11px] text-zinc-500">

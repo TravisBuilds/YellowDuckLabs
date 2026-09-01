@@ -104,6 +104,8 @@ export default function MapView({
 
     instance.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
     instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    const resize = new ResizeObserver(() => instance.resize());
+    resize.observe(container.current);
 
     popup.current = new maplibregl.Popup({
       closeButton: false,
@@ -196,6 +198,7 @@ export default function MapView({
     });
 
     return () => {
+      resize.disconnect();
       instance.remove();
       map.current = null;
       loaded.current = false;

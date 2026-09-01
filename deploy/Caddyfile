@@ -2,8 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-# Reachable by IP before GoDaddy DNS is pointed. HTTPS for the names
-# starts working once the A records resolve here.
+# Reachable by IP before DNS / TLS is ready.
 http://{$PUBLIC_IP} {
 	encode zstd gzip
 	handle /api/* {
@@ -17,22 +16,26 @@ http://{$PUBLIC_IP} {
 	}
 }
 
+# www has a valid Let's Encrypt cert. Serve the app here.
 www.{$DOMAIN} {
-	redir https://{$DOMAIN}{uri} permanent
-}
-
-{$DOMAIN} {
 	encode zstd gzip
-
-	# FastAPI: municipalities, geo, analyst, and the process health probe.
 	handle /api/* {
 		reverse_proxy api:8000
 	}
 	handle /health {
 		reverse_proxy api:8000
 	}
-
 	handle {
 		reverse_proxy web:3000
 	}
+}
+
+# HTTP apex → www. HTTPS apex is issued separately; until that cert
+# exists, use www. Do not send browsers to https://apex.
+http://{$DOMAIN} {
+	redir https://www.{$DOMAIN}{uri} permanent
+}
+
+{$DOMAIN} {
+	redir https://www.{$DOMAIN}{uri} permanent
 }

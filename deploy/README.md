@@ -55,3 +55,43 @@ DNS → yellowducklabs.org → Manage DNS. Do not use GoDaddy Website / cPanel h
 | A | `www` | *VPS public IPv4* | 600 |
 
 Leave MX records alone if you use GoDaddy email. After DNS settles, Caddy obtains the cert automatically. Open https://yellowducklabs.org.
+
+## 4. NASA FIRMS key (recommended)
+
+Near-real-time satellite detections need a free MAP key:
+
+1. Open https://firms.modaps.eosdis.nasa.gov/api/map_key/
+2. Enter `firewatch@yellowducklabs.org` (or any inbox you monitor).
+3. Paste the key into `.env.production` on the VPS:
+
+```bash
+FIRMS_MAP_KEY=your-key-here
+```
+
+4. Restart the API and ingest once:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d api
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
+  python -m firewatch ingest -m west-vancouver --skip-boundary --only nasa_firms
+```
+
+Without a key, `nasa_firms` stays `UNAVAILABLE` (not zero detections).
+
+## 5. Daily refresh
+
+Live weather and hotspot sources should be re-ingested daily. On the VPS:
+
+```bash
+chmod +x deploy/daily-refresh.sh deploy/install-daily-refresh.sh
+./deploy/install-daily-refresh.sh
+```
+
+This installs a cron job at **06:00 America/Vancouver** (13:00 UTC during PDT). Logs go to `/var/log/firewatch-refresh.log`.
+
+To run manually:
+
+```bash
+./deploy/daily-refresh.sh
+tail -50 /var/log/firewatch-refresh.log
+```

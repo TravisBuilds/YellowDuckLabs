@@ -36,7 +36,7 @@ docker compose run --rm api python -m firewatch run -m west-vancouver
 docker compose up -d api web
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:3000> for the lab, then <http://localhost:3000/firewatch> for the operating picture.
 
 No API keys are required. Every default source is keyless and openly licensed.
 Two optional keys add capability and are reported as `UNAVAILABLE` when absent

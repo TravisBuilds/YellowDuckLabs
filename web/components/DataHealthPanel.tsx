@@ -92,7 +92,7 @@ export default function DataHealthPanel({ municipalityId }: { municipalityId: st
   );
 
   return (
-    <div className="overflow-y-auto">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-contain">
       <Panel title="Source status" subtitle={`${health.datasets.length} configured sources.`}>
         <div className="flex flex-wrap gap-1.5">
           {STATUS_ORDER.filter((s) => health.overall.counts[s]).map((status) => (
@@ -106,21 +106,21 @@ export default function DataHealthPanel({ municipalityId }: { municipalityId: st
         </div>
 
         {problems.length > 0 && (
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 divide-y divide-white/5 rounded border border-red-500/15">
             {problems.map((dataset) => (
               <div
                 key={dataset.source_id}
-                className="rounded border border-red-500/20 bg-red-500/[0.05] px-2.5 py-2"
+                className="flex items-start justify-between gap-3 px-2.5 py-2"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-zinc-200">{dataset.source_id}</span>
-                  <StatusPill status={dataset.status} />
+                <div className="min-w-0">
+                  <div className="text-[12px] text-zinc-200">{dataset.source_id}</div>
+                  {dataset.message && (
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-zinc-500">
+                      {dataset.message}
+                    </p>
+                  )}
                 </div>
-                {dataset.message && (
-                  <p className="mt-1 text-[10px] leading-snug text-zinc-400">
-                    {dataset.message}
-                  </p>
-                )}
+                <StatusPill status={dataset.status} />
               </div>
             ))}
           </div>
@@ -154,7 +154,7 @@ export default function DataHealthPanel({ municipalityId }: { municipalityId: st
             <Collapsible
               key={dataset.source_id}
               title={dataset.source_id}
-              count={dataset.records_in_use.toLocaleString()}
+              count={STATUS_STYLES[dataset.status]?.label || dataset.status}
             >
               <div className="space-y-1.5 text-[11px] text-zinc-400">
                 <div className="flex flex-wrap items-center gap-2">
