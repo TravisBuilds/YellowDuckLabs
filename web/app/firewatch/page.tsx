@@ -332,20 +332,6 @@ export default function Page() {
           )}
           {stats}
         </div>
-
-        <div className="flex items-center justify-between gap-3 border-t border-duck/20 bg-duck/10 px-3 py-2 lg:px-4">
-          <p className="min-w-0 text-[12px] leading-snug text-zinc-200 lg:text-[13px]">
-            <span className="font-semibold text-duck">First responders:</span> get email
-            when a region newly reaches High or Very high priority.
-          </p>
-          <button
-            type="button"
-            onClick={openAlerts}
-            className="shrink-0 rounded bg-duck px-3 py-1.5 text-[12px] font-semibold text-black hover:opacity-90 lg:text-[13px]"
-          >
-            Sign up
-          </button>
-        </div>
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row">
