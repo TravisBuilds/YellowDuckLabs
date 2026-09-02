@@ -29,10 +29,10 @@ const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 type Tab = "evidence" | "priorities" | "analyst" | "health" | "alerts";
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; highlight?: boolean }[] = [
   { id: "evidence", label: "Location" },
+  { id: "alerts", label: "Email alerts", highlight: true },
   { id: "priorities", label: "Priorities" },
-  { id: "alerts", label: "Alerts" },
   { id: "analyst", label: "Analyst" },
   { id: "health", label: "Data health" },
 ];
@@ -159,6 +159,10 @@ export default function Page() {
     },
     [municipalityId, date],
   );
+
+  const openAlerts = useCallback(() => {
+    setTab("alerts");
+  }, []);
 
   // Re-read the selected location when the date changes.
   useEffect(() => {
@@ -289,6 +293,18 @@ export default function Page() {
             ))}
           </select>
 
+          <button
+            type="button"
+            onClick={openAlerts}
+            className={`shrink-0 rounded px-3 py-2 text-[13px] font-semibold lg:py-1.5 lg:text-[12px] ${
+              tab === "alerts"
+                ? "bg-duck/20 text-duck ring-1 ring-duck/50"
+                : "bg-duck text-black hover:opacity-90"
+            }`}
+          >
+            Priority alerts
+          </button>
+
           <div className="hidden flex-1 items-center gap-6 lg:flex">
             {stats}
             {bandsRow}
@@ -315,6 +331,20 @@ export default function Page() {
             </button>
           )}
           {stats}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-duck/20 bg-duck/10 px-3 py-2 lg:px-4">
+          <p className="min-w-0 text-[12px] leading-snug text-zinc-200 lg:text-[13px]">
+            <span className="font-semibold text-duck">First responders:</span> get email
+            when a region newly reaches High or Very high priority.
+          </p>
+          <button
+            type="button"
+            onClick={openAlerts}
+            className="shrink-0 rounded bg-duck px-3 py-1.5 text-[12px] font-semibold text-black hover:opacity-90 lg:text-[13px]"
+          >
+            Sign up
+          </button>
         </div>
       </header>
 
@@ -473,7 +503,9 @@ export default function Page() {
                 className={`min-h-11 flex-1 px-1.5 py-2.5 text-[12px] font-medium transition-colors lg:min-h-0 lg:px-2 lg:py-2 lg:text-[11px] ${
                   tab === item.id
                     ? "border-b-2 border-duck bg-white/[0.03] text-duck"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    : item.highlight
+                      ? "bg-duck/10 text-duck hover:bg-duck/15"
+                      : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 {item.label}

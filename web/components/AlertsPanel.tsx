@@ -96,8 +96,8 @@ export default function AlertsPanel({ regions }: Props) {
   return (
     <div className="h-full min-h-0 overflow-y-auto overscroll-contain">
       <Panel
-        title="Email alerts"
-        subtitle="Get notified when a region has new High or Very high priority cells after the daily score refresh."
+        title="High priority email alerts"
+        subtitle="For fire halls, dispatch, and municipal ops. We email you when new cells cross into High or Very high after the daily score refresh."
       >
         {emailEnabled === false && (
           <Callout tone="warn">
