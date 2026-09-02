@@ -192,7 +192,8 @@ def summary(
         {"m": municipality_id, "d": as_of},
     ).all()
 
-    # Municipality-wide fire weather: the modal nearest-station reading.
+    # Nearest-station fire weather for the header. Distance sorting over every
+    # station was too expensive on a small VPS, so use the latest observation.
     weather = session.execute(
         text(
             """
@@ -206,14 +207,13 @@ def summary(
                    (f.properties_json->>'rh')::float AS rh,
                    (f.properties_json->>'ws')::float AS ws,
                    f.observed_at,
-                   ST_Distance(f.geometry::geography,
-                               ST_Centroid((SELECT boundary FROM municipalities
-                                             WHERE id = :m))::geography) / 1000.0 AS km
+                   NULL::float AS km
               FROM features f
              WHERE f.municipality_id = :m
                AND f.feature_kind = 'fire_weather_observation'
+               AND NOT f.superseded
                AND f.observed_at <= (CAST(:d AS date) + interval '1 day')
-             ORDER BY km ASC, f.observed_at DESC
+             ORDER BY f.observed_at DESC
              LIMIT 1
             """
         ),
@@ -225,6 +225,7 @@ def summary(
             """
             SELECT count(*) FROM features
              WHERE municipality_id = :m AND feature_kind = 'satellite_hotspot'
+               AND NOT superseded
                AND observed_at > (CAST(:d AS date) - interval '7 days')
                AND observed_at <= (CAST(:d AS date) + interval '1 day')
             """

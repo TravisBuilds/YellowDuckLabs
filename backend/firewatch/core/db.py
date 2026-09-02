@@ -95,6 +95,9 @@ def init_db() -> None:
             "ON priority_scores (municipality_id, as_of_date, score_version)",
             "CREATE INDEX IF NOT EXISTS ix_features_kind_active "
             "ON features (municipality_id, feature_kind) WHERE NOT superseded",
+            "CREATE INDEX IF NOT EXISTS ix_features_muni_kind_obs "
+            "ON features (municipality_id, feature_kind, observed_at DESC) "
+            "WHERE NOT superseded",
             "CREATE INDEX IF NOT EXISTS ix_doc_chunks_fts "
             "ON document_chunks USING GIN (to_tsvector('english', text))",
         ):

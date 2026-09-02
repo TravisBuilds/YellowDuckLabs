@@ -15,6 +15,11 @@ from firewatch.core.ai.tools import (
     get_weather_profile,
     rank_cells,
 )
+from firewatch.core.cells_cache import (
+    cells_cache_path,
+    read_cells_cache,
+    write_cells_cache,
+)
 from firewatch.core.db import get_session
 from firewatch.core.derive import METRIC_DEFINITIONS
 from firewatch.core.models import AnalysisCell, Municipality, PriorityScore
@@ -136,6 +141,16 @@ def cells(
     if min_overall_priority is not None:
         conditions.append("p.overall_priority >= :minop")
 
+    cache_path = cells_cache_path(
+        municipality_id,
+        value,
+        as_of,
+        within_boundary=within_boundary,
+        min_overall_priority=min_overall_priority,
+    )
+    if min_value is None and (cached := read_cells_cache(cache_path)):
+        return cached
+
     payload = session.execute(
         text(
             f"""
@@ -180,6 +195,8 @@ def cells(
         "min_overall_priority": min_overall_priority,
         "count": len(result.get("features", [])),
     }
+    if min_value is None:
+        write_cells_cache(cache_path, result)
     return result
 
 

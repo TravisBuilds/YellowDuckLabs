@@ -20,6 +20,9 @@ from firewatch.core.scoring.priority import SCORE_VERSION, CellMetrics, score_ce
 
 log = logging.getLogger(__name__)
 
+# Default map shading columns to warm into the on-disk cache after scoring.
+_CELLS_CACHE_VALUES = ("priority_percentile", "overall_priority")
+
 
 def load_cell_metrics(
     session: Session, municipality_id: str, as_of_date: str
@@ -88,6 +91,9 @@ def score_municipality(
         )
         session.execute(delete(PriorityScore).where(PriorityScore.id.in_(existing)))
         session.commit()
+        from firewatch.core.cells_cache import invalidate_municipality_caches
+
+        invalidate_municipality_caches(municipality.id)
 
     scored = 0
     unscorable = 0
@@ -157,6 +163,8 @@ def score_municipality(
         )
     except Exception:
         log.exception("alert processing failed for %s", municipality.id)
+
+    _warm_cells_caches(session, municipality.id, as_of_date)
 
     return {
         "as_of_date": as_of_date,
@@ -231,3 +239,22 @@ def _assign_percentiles(
     )
     session.commit()
     return result.rowcount or 0
+
+
+def _warm_cells_caches(session: Session, municipality_id: str, as_of_date: str) -> None:
+    """Pre-build the GeoJSON files the map reads on every load."""
+    from firewatch.api.routers.geo import cells as cells_endpoint
+
+    for value in _CELLS_CACHE_VALUES:
+        try:
+            cells_endpoint(
+                municipality_id=municipality_id,
+                date=as_of_date,
+                value=value,
+                within_boundary=True,
+                min_value=None,
+                min_overall_priority=None,
+                session=session,
+            )
+        except Exception:
+            log.exception("failed to warm cells cache for %s (%s)", municipality_id, value)
