@@ -20,6 +20,31 @@ export function scoreColorExpression(property = "v") {
   ] as unknown as maplibregl.ExpressionSpecification;
 }
 
+/** Relative rank within the municipality (0 = lowest today, 1 = highest). */
+export function percentileColorExpression(property = "v") {
+  return [
+    "interpolate",
+    ["linear"],
+    ["coalesce", ["get", property], -1],
+    -1,
+    "#30363d",
+    0,
+    "#1e3a5f",
+    0.5,
+    "#d9b310",
+    1,
+    "#c53030",
+  ] as unknown as maplibregl.ExpressionSpecification;
+}
+
+export const PRIORITY_BAND_LEGEND: { stop: number; label: string }[] = [
+  { stop: 0, label: "Very low" },
+  { stop: 0.3, label: "Low" },
+  { stop: 0.45, label: "Moderate" },
+  { stop: 0.6, label: "High" },
+  { stop: 0.75, label: "Very high" },
+];
+
 export const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   CURRENT: { bg: "bg-emerald-500/15", text: "text-emerald-300", label: "Current" },
   AGING: { bg: "bg-amber-500/15", text: "text-amber-300", label: "Aging" },

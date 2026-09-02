@@ -4,7 +4,10 @@ import maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 import { API_BASE } from "@/lib/api";
-import { scoreColorExpression } from "@/lib/display";
+import {
+  percentileColorExpression,
+  scoreColorExpression,
+} from "@/lib/display";
 import { FEATURE_LAYERS, TOP_PRIORITY_MIN, type FeatureLayerSpec } from "@/lib/layers";
 
 interface WmsOverlay {
@@ -187,18 +190,9 @@ export default function MapView({
       if (!feature || !popup.current) return;
       instance.getCanvas().style.cursor = "crosshair";
       const props = feature.properties as Record<string, unknown>;
-      const value = props.v === null || props.v === undefined ? "no value" : String(props.v);
       popup.current
         .setLngLat(event.lngLat)
-        .setHTML(
-          `<div style="font:11px ui-monospace,monospace;background:#0d1117;color:#e6edf3;
-            padding:6px 8px;border:1px solid rgba(255,255,255,.12);border-radius:4px">
-            <div style="color:#f5b301">${props.band ?? "Unscored"}</div>
-            <div>value ${value}</div>
-            <div style="color:#8b949e">confidence ${props.conf ?? "—"}</div>
-            <div style="color:#6e7681">${props.h3 ?? ""}</div>
-          </div>`,
-        )
+        .setHTML(buildCellPopupHtml(props, cellValue, cellMetric))
         .addTo(instance);
     });
 
@@ -232,7 +226,11 @@ export default function MapView({
       instance.setPaintProperty(
         CELL_FILL,
         "fill-color",
-        cellMetric ? metricColorExpression() : scoreColorExpression("v"),
+        cellMetric
+          ? metricColorExpression()
+          : cellValue === "priority_percentile"
+            ? percentileColorExpression("v")
+            : scoreColorExpression("v"),
       );
     }
   }, [municipalityId, cellValue, cellMetric, date, topPrioritiesOnly]);
@@ -338,6 +336,57 @@ export default function MapView({
 }
 
 // --- helpers --------------------------------------------------------------
+
+function cellFillColorExpression(
+  cellValue: string,
+  cellMetric: string | null,
+): maplibregl.ExpressionSpecification {
+  if (cellMetric) return metricColorExpression();
+  if (cellValue === "priority_percentile") return percentileColorExpression("v");
+  return scoreColorExpression("v");
+}
+
+function formatPopupNumber(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return String(value);
+  return numeric.toFixed(3);
+}
+
+function buildCellPopupHtml(
+  props: Record<string, unknown>,
+  cellValue: string,
+  cellMetric: string | null,
+): string {
+  const band = String(props.band ?? "Unscored");
+  const abs = formatPopupNumber(props.abs);
+  const pct = formatPopupNumber(props.pct);
+  const value = formatPopupNumber(props.v);
+  const conf = props.conf ?? "—";
+  const h3 = props.h3 ?? "";
+
+  let headline = "";
+  let detail = "";
+
+  if (cellMetric) {
+    headline = `Metric ${value}`;
+    detail = `<div style="color:#8b949e">raw measurement</div>`;
+  } else if (cellValue === "priority_percentile") {
+    headline = `Rank ${Math.round(Number(props.pct ?? 0) * 100)}% within municipality`;
+    detail = `<div style="color:#f5b301">Absolute priority ${abs} · ${band}</div>`;
+  } else {
+    headline = band;
+    detail = `<div>priority ${value}</div>`;
+  }
+
+  return `<div style="font:11px ui-monospace,monospace;background:#0d1117;color:#e6edf3;
+    padding:6px 8px;border:1px solid rgba(255,255,255,.12);border-radius:4px">
+    <div>${headline}</div>
+    ${detail}
+    <div style="color:#8b949e">confidence ${conf}</div>
+    <div style="color:#6e7681">${h3}</div>
+  </div>`;
+}
 
 function cellUrl(
   municipalityId: string,
@@ -486,7 +535,7 @@ function addCellLayers(
       type: "fill",
       source: "cells",
       paint: {
-        "fill-color": scoreColorExpression("v"),
+        "fill-color": cellFillColorExpression(cellValue, null),
         "fill-opacity": opacity,
       },
     },

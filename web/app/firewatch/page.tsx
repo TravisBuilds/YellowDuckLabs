@@ -21,7 +21,7 @@ import PriorityList from "@/components/PriorityList";
 import Timeline from "@/components/Timeline";
 import { Callout, ErrorNote, Spinner, Stat } from "@/components/ui";
 import { api, type AlertRegion, type CellProfile, type MunicipalityDetail, type Summary } from "@/lib/api";
-import { PRIORITY_STOPS, fmt, fmtPercent } from "@/lib/display";
+import { PRIORITY_BAND_LEGEND, PRIORITY_STOPS, fmt, fmtPercent } from "@/lib/display";
 import { FEATURE_LAYERS } from "@/lib/layers";
 
 // MapLibre touches window at import time.
@@ -398,29 +398,61 @@ export default function Page() {
           </button>
 
           {!cellMetric && (
-            <div className="absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-black/75 px-2.5 py-2 backdrop-blur lg:bottom-9">
+            <div className="absolute bottom-3 left-3 z-10 max-w-[15rem] rounded border border-white/10 bg-black/75 px-2.5 py-2 backdrop-blur lg:bottom-9">
               <div className="text-[9px] uppercase tracking-wider text-zinc-500">
                 {topPrioritiesOnly
                   ? "High & very high only"
                   : cellValue === "priority_percentile"
-                    ? "Relative rank"
-                    : "Score"}
+                    ? "Rank within municipality"
+                    : "Absolute priority"}
               </div>
-              <div className="mt-1 flex items-center gap-1">
-                {legend.map(({ stop, color }) => (
-                  <span key={stop} className="flex flex-col items-center gap-0.5">
-                    <span
-                      className="h-2.5 w-6 rounded-sm"
-                      style={{ background: color }}
-                    />
-                    <span className="font-mono text-[8px] text-zinc-500">{stop}</span>
+              {cellValue === "priority_percentile" && !topPrioritiesOnly ? (
+                <>
+                  <div className="mt-1 flex items-center gap-1">
+                    <span className="flex flex-col items-center gap-0.5">
+                      <span
+                        className="h-2.5 w-10 rounded-sm"
+                        style={{
+                          background:
+                            "linear-gradient(to right, #1e3a5f, #d9b310, #c53030)",
+                        }}
+                      />
+                      <span className="flex w-10 justify-between font-mono text-[8px] text-zinc-500">
+                        <span>0</span>
+                        <span>1</span>
+                      </span>
+                    </span>
+                    <span className="text-[8px] leading-snug text-zinc-600">
+                      lowest → highest today. Band labels use absolute score.
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-1 flex items-center gap-1">
+                  {legend.map(({ stop, color }) => (
+                    <span key={stop} className="flex flex-col items-center gap-0.5">
+                      <span
+                        className="h-2.5 w-6 rounded-sm"
+                        style={{ background: color }}
+                      />
+                      <span className="font-mono text-[8px] text-zinc-500">{stop}</span>
+                    </span>
+                  ))}
+                  <span className="ml-1.5 flex flex-col items-center gap-0.5">
+                    <span className="h-2.5 w-6 rounded-sm bg-[#30363d]" />
+                    <span className="text-[8px] text-zinc-500">n/a</span>
                   </span>
-                ))}
-                <span className="ml-1.5 flex flex-col items-center gap-0.5">
-                  <span className="h-2.5 w-6 rounded-sm bg-[#30363d]" />
-                  <span className="text-[8px] text-zinc-500">n/a</span>
-                </span>
-              </div>
+                </div>
+              )}
+              {cellValue === "overall_priority" && !topPrioritiesOnly && (
+                <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[8px] text-zinc-600">
+                  {PRIORITY_BAND_LEGEND.map(({ stop, label }) => (
+                    <span key={label}>
+                      ≥{stop} {label.toLowerCase()}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
