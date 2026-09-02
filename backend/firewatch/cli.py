@@ -228,6 +228,39 @@ def cmd_sources(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_alerts(args: argparse.Namespace) -> int:
+    from firewatch.core.alerts.process import process_municipality_alerts
+    from firewatch.core.db import session_scope
+    from firewatch.core.models import Municipality, PriorityScore
+    from firewatch.core.scoring.priority import SCORE_VERSION
+    from sqlalchemy import func, select
+
+    with session_scope() as session:
+        municipality = session.get(Municipality, args.municipality)
+        if municipality is None:
+            log.error("%s has not been ingested yet", args.municipality)
+            return 1
+        as_of_date = args.date
+        if args.date:
+            parsed = _parse_date(args.date)
+            as_of_date = parsed.date().isoformat() if parsed else args.date
+        else:
+            as_of_date = session.scalar(
+                select(func.max(PriorityScore.as_of_date)).where(
+                    PriorityScore.municipality_id == args.municipality
+                )
+            )
+        if not as_of_date:
+            log.error("no scores found for %s", args.municipality)
+            return 1
+        summary = process_municipality_alerts(
+            session, args.municipality, as_of_date, SCORE_VERSION
+        )
+
+    print(json.dumps(summary, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="firewatch", description=__doc__)
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -283,6 +316,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sources = subparsers.add_parser("sources", help="list adapters and configs")
     sources.set_defaults(func=cmd_sources)
+
+    alerts = subparsers.add_parser("alerts", help="process priority alerts")
+    add_municipality(alerts)
+    alerts.set_defaults(func=cmd_alerts)
 
     return parser
 

@@ -148,6 +148,16 @@ def score_municipality(
     session.commit()
     ranked = _assign_percentiles(session, municipality.id, as_of_date, score_version)
 
+    alert_summary = None
+    try:
+        from firewatch.core.alerts.process import process_municipality_alerts
+
+        alert_summary = process_municipality_alerts(
+            session, municipality.id, as_of_date, score_version
+        )
+    except Exception:
+        log.exception("alert processing failed for %s", municipality.id)
+
     return {
         "as_of_date": as_of_date,
         "score_version": score_version,
@@ -155,6 +165,7 @@ def score_municipality(
         "cells_without_data": unscorable,
         "cells_ranked": ranked,
         "band_distribution": dict(distribution),
+        "alerts": alert_summary,
     }
 
 

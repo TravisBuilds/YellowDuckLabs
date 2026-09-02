@@ -220,6 +220,21 @@ export interface AnalystResponse {
   notes: string[];
 }
 
+export interface AlertRegion {
+  id: string;
+  name: string;
+  short_name: string;
+  province: string;
+  ingested: boolean;
+}
+
+export interface AlertSubscription {
+  municipality_id: string;
+  short_name: string;
+  name: string;
+  subscribed_at: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -398,5 +413,38 @@ export const api = {
     request<AnalystResponse>(`/api/municipalities/${id}/ask`, {
       method: "POST",
       body: JSON.stringify({ question, context }),
+    }),
+
+  alertRegions: () => request<{ regions: AlertRegion[] }>("/api/alerts/regions"),
+
+  alertStatus: () =>
+    request<{ email_enabled: boolean; public_web_url: string }>("/api/alerts/status"),
+
+  lookupAlerts: (email: string) =>
+    request<{ email: string; subscriptions: AlertSubscription[] }>("/api/alerts/lookup", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  updateAlertSubscriptions: (email: string, municipalityIds: string[]) =>
+    request<{
+      email: string;
+      municipality_ids: string[];
+      added: string[];
+      removed: string[];
+      subscriptions: AlertSubscription[];
+    }>("/api/alerts/subscriptions", {
+      method: "PUT",
+      body: JSON.stringify({ email, municipality_ids: municipalityIds }),
+    }),
+
+  unsubscribeAlert: (token: string) =>
+    request<{
+      status: string;
+      email: string;
+      municipality_id: string;
+      short_name: string;
+    }>(`/api/alerts/unsubscribe/${encodeURIComponent(token)}`, {
+      method: "DELETE",
     }),
 };

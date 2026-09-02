@@ -454,3 +454,43 @@ class DocumentChunk(Base):
     embedding: Mapped[list | None] = mapped_column(JsonB, nullable=True)
 
     document: Mapped[Document] = relationship(back_populates="chunks")
+
+
+class AlertSubscription(Base):
+    """Email alert for a municipality crossing into High priority."""
+
+    __tablename__ = "alert_subscriptions"
+    __table_args__ = (
+        UniqueConstraint("email", "municipality_id", name="uq_alert_subscription"),
+        Index("ix_alert_subscriptions_municipality", "municipality_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    municipality_id: Mapped[str] = mapped_column(
+        ForeignKey("municipalities.id", ondelete="CASCADE"), nullable=False
+    )
+    unsubscribe_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AlertDispatch(Base):
+    """Record that subscribers were notified for one score date."""
+
+    __tablename__ = "alert_dispatches"
+    __table_args__ = (
+        UniqueConstraint(
+            "municipality_id", "as_of_date", "score_version", name="uq_alert_dispatch"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    municipality_id: Mapped[str] = mapped_column(
+        ForeignKey("municipalities.id", ondelete="CASCADE"), index=True
+    )
+    as_of_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    score_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    new_high_cells: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    recipients: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    summary: Mapped[dict] = mapped_column(JsonB, default=dict)

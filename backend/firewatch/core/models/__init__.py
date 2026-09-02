@@ -1,5 +1,7 @@
 from firewatch.core.models.base import Base
 from firewatch.core.models.tables import (
+    AlertDispatch,
+    AlertSubscription,
     AnalysisCell,
     CellMetric,
     DataGap,
@@ -16,6 +18,8 @@ from firewatch.core.models.tables import (
 )
 
 __all__ = [
+    "AlertDispatch",
+    "AlertSubscription",
     "AnalysisCell",
     "Base",
     "CellMetric",

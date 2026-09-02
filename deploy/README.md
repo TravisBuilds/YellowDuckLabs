@@ -78,7 +78,23 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api
 
 Without a key, `nasa_firms` stays `UNAVAILABLE` (not zero detections).
 
-## 5. Daily refresh
+## 5. Priority alert email (optional)
+
+Subscribers are notified when new cells cross into **High** priority after the daily score refresh. Configure SMTP in `.env.production`:
+
+```bash
+PUBLIC_WEB_URL=https://www.yellowducklabs.org
+SMTP_HOST=smtp.your-provider.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+SMTP_FROM=firewatch@yellowducklabs.org
+SMTP_USE_TLS=true
+```
+
+Restart the API after changing env vars. Subscriptions are saved even without SMTP; emails are only sent once SMTP is configured.
+
+## 6. Daily refresh
 
 Live weather and hotspot sources should be re-ingested daily. On the VPS:
 

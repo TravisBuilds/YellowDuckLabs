@@ -42,6 +42,17 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     firewatch_llm_model: str = "claude-sonnet-4-5"
 
+    # Public site URL for links in alert emails (manage / unsubscribe).
+    public_web_url: str = "https://www.yellowducklabs.org"
+
+    # Transactional email. When SMTP is unset, alerts are logged but not sent.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool = True
+
     @property
     def user_agent(self) -> str:
         return self.http_user_agent.format(contact=self.firewatch_contact)
@@ -49,6 +60,10 @@ class Settings(BaseSettings):
     @property
     def llm_enabled(self) -> bool:
         return bool(self.anthropic_api_key)
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.smtp_host and self.smtp_from)
 
 
 settings = Settings()

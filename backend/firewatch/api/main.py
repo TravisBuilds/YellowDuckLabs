@@ -7,7 +7,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from firewatch.api.routers import ai, geo, municipalities
+from firewatch.api.routers import ai, alerts, geo, municipalities
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +36,14 @@ app.add_middleware(
 app.include_router(municipalities.router)
 app.include_router(geo.router)
 app.include_router(ai.router)
+app.include_router(alerts.router)
+
+
+@app.on_event("startup")
+def _ensure_schema() -> None:
+    from firewatch.core.db import init_db
+
+    init_db()
 
 
 @app.get("/health", tags=["meta"])

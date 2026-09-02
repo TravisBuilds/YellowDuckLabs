@@ -13,24 +13,26 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AnalystPanel from "@/components/AnalystPanel";
+import AlertsPanel from "@/components/AlertsPanel";
 import DataHealthPanel from "@/components/DataHealthPanel";
 import EvidenceDrawer from "@/components/EvidenceDrawer";
 import LayerControls from "@/components/LayerControls";
 import PriorityList from "@/components/PriorityList";
 import Timeline from "@/components/Timeline";
 import { Callout, ErrorNote, Spinner, Stat } from "@/components/ui";
-import { api, type CellProfile, type MunicipalityDetail, type Summary } from "@/lib/api";
+import { api, type AlertRegion, type CellProfile, type MunicipalityDetail, type Summary } from "@/lib/api";
 import { PRIORITY_STOPS, fmt, fmtPercent } from "@/lib/display";
 import { FEATURE_LAYERS } from "@/lib/layers";
 
 // MapLibre touches window at import time.
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
-type Tab = "evidence" | "priorities" | "analyst" | "health";
+type Tab = "evidence" | "priorities" | "analyst" | "health" | "alerts";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "evidence", label: "Location" },
   { id: "priorities", label: "Priorities" },
+  { id: "alerts", label: "Alerts" },
   { id: "analyst", label: "Analyst" },
   { id: "health", label: "Data health" },
 ];
@@ -47,6 +49,7 @@ export default function Page() {
   const [metrics, setMetrics] = useState<
     { metric: string; label: string; unit: string | null; group: string; available: boolean; cells_with_value: number }[]
   >([]);
+  const [alertRegions, setAlertRegions] = useState<AlertRegion[]>([]);
   const [bootError, setBootError] = useState<string | null>(null);
 
   const [date, setDate] = useState<string | null>(null);
@@ -74,6 +77,13 @@ export default function Page() {
     sync();
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    api
+      .alertRegions()
+      .then(({ regions }) => setAlertRegions(regions))
+      .catch(() => setAlertRegions([]));
   }, []);
 
   // --- boot ---------------------------------------------------------------
@@ -462,6 +472,7 @@ export default function Page() {
               />
             )}
             {tab === "health" && <DataHealthPanel municipalityId={municipalityId} />}
+            {tab === "alerts" && <AlertsPanel regions={alertRegions} />}
           </div>
         </aside>
       </div>
