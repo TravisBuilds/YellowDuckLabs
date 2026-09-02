@@ -89,6 +89,10 @@ def init_db() -> None:
             "ON analysis_cells USING GIST (geometry)",
             "CREATE INDEX IF NOT EXISTS ix_cells_geog "
             "ON analysis_cells USING GIST ((geometry::geography))",
+            "CREATE INDEX IF NOT EXISTS ix_cells_muni_inside "
+            "ON analysis_cells (municipality_id) WHERE within_boundary",
+            "CREATE INDEX IF NOT EXISTS ix_priority_muni_date "
+            "ON priority_scores (municipality_id, as_of_date, score_version)",
             "CREATE INDEX IF NOT EXISTS ix_features_kind_active "
             "ON features (municipality_id, feature_kind) WHERE NOT superseded",
             "CREATE INDEX IF NOT EXISTS ix_doc_chunks_fts "

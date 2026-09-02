@@ -193,6 +193,53 @@ def coverage_summary(session: Session, municipality_id: str) -> dict[str, Any]:
     }
 
 
+def source_status_summary(session: Session, municipality_id: str) -> dict[str, Any]:
+    """Header-grade source counts without scanning the features table."""
+    rows = session.execute(
+        text(
+            """
+            SELECT dv.status, d.source_id, d.precedence_tier
+              FROM datasets d
+              JOIN (
+                    SELECT dataset_id, max(version) AS version
+                      FROM dataset_versions
+                     WHERE as_of_date IS NULL
+                     GROUP BY dataset_id
+                   ) latest ON latest.dataset_id = d.id
+              JOIN dataset_versions dv
+                ON dv.dataset_id = d.id AND dv.version = latest.version
+             WHERE d.municipality_id = :m
+            """
+        ),
+        {"m": municipality_id},
+    ).all()
+
+    counts: dict[str, int] = {}
+    failed_sources: list[str] = []
+    authoritative_gaps: list[str] = []
+    municipal_configured = 0
+    municipal_in_use = 0
+
+    for status, source_id, tier in rows:
+        counts[status] = counts.get(status, 0) + 1
+        if status in {"FAILED", "UNAVAILABLE"}:
+            failed_sources.append(source_id)
+        if tier == "municipal":
+            municipal_configured += 1
+            if status in {"FAILED", "UNAVAILABLE"}:
+                authoritative_gaps.append(source_id)
+            elif status not in {"FAILED", "UNAVAILABLE"}:
+                municipal_in_use += 1
+
+    return {
+        "counts": counts,
+        "failed_sources": failed_sources,
+        "authoritative_gaps": authoritative_gaps,
+        "municipal_sources_configured": municipal_configured,
+        "municipal_sources_in_use": municipal_in_use,
+    }
+
+
 def overall_status(health: list[dict[str, Any]]) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for record in health:

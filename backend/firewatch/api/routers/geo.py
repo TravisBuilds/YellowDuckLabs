@@ -146,7 +146,7 @@ def cells(
               FROM (
                 SELECT jsonb_build_object(
                          'type', 'Feature',
-                         'geometry', ST_AsGeoJSON(c.geometry, 5)::jsonb,
+                         'geometry', ST_AsGeoJSON(c.geometry, 3)::jsonb,
                          'properties', jsonb_build_object(
                              'h3', c.h3_index,
                              'lat', round(c.centroid_lat::numeric, 5),
@@ -214,7 +214,7 @@ def cells_by_metric(
               FROM (
                 SELECT jsonb_build_object(
                          'type', 'Feature',
-                         'geometry', ST_AsGeoJSON(c.geometry, 5)::jsonb,
+                         'geometry', ST_AsGeoJSON(c.geometry, 3)::jsonb,
                          'properties', jsonb_build_object(
                              'h3', c.h3_index,
                              'v', round(cm.value::numeric, 3),

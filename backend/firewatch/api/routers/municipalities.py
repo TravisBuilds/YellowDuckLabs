@@ -12,6 +12,7 @@ from firewatch.core.health.report import (
     coverage_summary,
     dataset_health,
     overall_status,
+    source_status_summary,
 )
 from firewatch.core.models import (
     AnalysisCell,
@@ -52,6 +53,13 @@ def list_all(session: Session = Depends(get_session)) -> dict:
         m.id: m
         for m in session.scalars(select(Municipality)).all()
     }
+    cell_counts = dict(
+        session.execute(
+            select(AnalysisCell.municipality_id, func.count(AnalysisCell.id)).group_by(
+                AnalysisCell.municipality_id
+            )
+        ).all()
+    )
     out = []
     for municipality_id in sorted(list_municipalities()):
         try:
@@ -72,15 +80,7 @@ def list_all(session: Session = Depends(get_session)) -> dict:
                 "h3_resolution": config.analysis.h3_resolution,
                 "source_count": len(config.enabled_sources()),
                 "ingested": row is not None,
-                "cells": (
-                    session.scalar(
-                        select(func.count(AnalysisCell.id)).where(
-                            AnalysisCell.municipality_id == municipality_id
-                        )
-                    )
-                    if row
-                    else 0
-                ),
+                "cells": cell_counts.get(municipality_id, 0) if row else 0,
             }
         )
     return {"municipalities": out}
@@ -232,7 +232,7 @@ def summary(
         {"m": municipality_id, "d": as_of},
     ).scalar()
 
-    health = dataset_health(session, municipality_id)
+    health = source_status_summary(session, municipality_id)
 
     return {
         "municipality_id": municipality_id,
@@ -270,7 +270,7 @@ def summary(
         "hotspot_caveat": (
             "A satellite hotspot is a thermal anomaly, not a confirmed wildfire."
         ),
-        "data_health": overall_status(health),
+        "data_health": health,
     }
 
 

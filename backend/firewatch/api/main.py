@@ -39,13 +39,6 @@ app.include_router(ai.router)
 app.include_router(alerts.router)
 
 
-@app.on_event("startup")
-def _ensure_schema() -> None:
-    from firewatch.core.db import init_db
-
-    init_db()
-
-
 @app.get("/health", tags=["meta"])
 def health() -> dict:
     from sqlalchemy import text
