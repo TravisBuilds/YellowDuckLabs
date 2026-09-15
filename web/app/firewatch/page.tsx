@@ -269,7 +269,7 @@ export default function Page() {
         <div className="flex items-center gap-3 px-3 py-2 lg:gap-5 lg:px-4">
           <Link href="/" className="shrink-0 hover:opacity-90">
             <img 
-              src="/logo-dark.png" 
+              src="/logo-end-overlay.png" 
               alt="Yellow Duck Labs" 
               className="h-7 lg:h-6"
             />
