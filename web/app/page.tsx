@@ -45,9 +45,11 @@ export default function HomePage() {
     <main className="min-h-dvh bg-ink text-zinc-200 lg:flex lg:h-dvh lg:flex-row lg:overflow-hidden">
       <aside className="flex flex-col justify-between border-b border-white/[0.06] px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6 lg:h-dvh lg:w-[22rem] lg:shrink-0 lg:border-b-0 lg:border-r lg:px-8 lg:py-10">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-duck">
-            Yellow Duck Labs
-          </p>
+          <img 
+            src="/logo-end-overlay.png" 
+            alt="Yellow Duck Labs" 
+            className="h-8"
+          />
           <h1 className="mt-6 text-[26px] font-medium leading-snug tracking-tight text-zinc-100 sm:text-[28px] lg:mt-8 lg:text-[22px]">
             We protect the world so the next generation can still grow up with
             yellow ducks.

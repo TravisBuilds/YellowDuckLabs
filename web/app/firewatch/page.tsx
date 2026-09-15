@@ -268,10 +268,12 @@ export default function Page() {
       <header className="shrink-0 border-b border-white/10 bg-black/50 pt-[max(0.4rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-3 px-3 py-2 lg:gap-5 lg:px-4">
           <Link href="/" className="shrink-0 hover:opacity-90">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-duck lg:text-[10px]">
-              Yellow Duck Labs
-            </div>
-            <div className="text-[12px] leading-tight text-zinc-400 lg:text-[11px] lg:text-zinc-500">
+            <img 
+              src="/logo-end-overlay.png" 
+              alt="Yellow Duck Labs" 
+              className="h-7 lg:h-6"
+            />
+            <div className="mt-1 text-[12px] leading-tight text-zinc-400 lg:text-[11px] lg:text-zinc-500">
               Fire Watch · silent sentry
             </div>
           </Link>
