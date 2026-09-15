@@ -46,9 +46,9 @@ export default function HomePage() {
       <aside className="flex flex-col justify-between border-b border-white/[0.06] px-5 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6 lg:h-dvh lg:w-[22rem] lg:shrink-0 lg:border-b-0 lg:border-r lg:px-8 lg:py-10">
         <div>
           <img 
-            src="/logo-dark.svg" 
+            src="/logo-dark.png" 
             alt="Yellow Duck Labs" 
-            className="h-6"
+            className="h-8"
           />
           <h1 className="mt-6 text-[26px] font-medium leading-snug tracking-tight text-zinc-100 sm:text-[28px] lg:mt-8 lg:text-[22px]">
             We protect the world so the next generation can still grow up with

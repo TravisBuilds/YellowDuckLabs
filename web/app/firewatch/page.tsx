@@ -269,9 +269,9 @@ export default function Page() {
         <div className="flex items-center gap-3 px-3 py-2 lg:gap-5 lg:px-4">
           <Link href="/" className="shrink-0 hover:opacity-90">
             <img 
-              src="/logo-dark.svg" 
+              src="/logo-dark.png" 
               alt="Yellow Duck Labs" 
-              className="h-6 lg:h-5"
+              className="h-7 lg:h-6"
             />
             <div className="mt-1 text-[12px] leading-tight text-zinc-400 lg:text-[11px] lg:text-zinc-500">
               Fire Watch · silent sentry
